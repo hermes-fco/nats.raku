@@ -3,11 +3,11 @@ unit grammar Nats::Grammar;
 
 token subject {
     # Allow standard NATS subject charset including '$' for JetStream ack subjects,
-    # alphanumerics, underscore, star and '>' for wildcards; literal '-' included.
-    [ <[ A..Z a..z 0..9 _ $ * > ]>+ '-'* ]+ %% '.'
+    # alphanumerics, underscore, star, '>' for wildcards, and '-' (hyphen).
+    [ <[ A..Z a..z 0..9 _ $ * > -]>+ ]+ %% '.'
 }
 token TOP {
-    [<msg-option> \n*]+
+    [<msg-option> \r?\n*]+
 }
 token sid { \d+ }
 token size { \d+ }
@@ -15,8 +15,8 @@ token payload(UInt $size) {
     <(
         . ** { $size }
     )>
-    <?before \n | $>
-    \n
+    <?before \r?\n | $>
+    \r?\n
 }
 token hsize { \d+ }
 token tsize { \d+ }
@@ -24,8 +24,8 @@ token hpayload(UInt $hsize, UInt $tsize) {
     <(
         . ** { $tsize }
     )>
-    <?before \n | $>
-    \n
+    <?before \r?\n | $>
+    \r?\n
 }
 proto token msg-option           { * }
 token msg-option:sym<OK>   { "+OK" }
@@ -40,7 +40,7 @@ token msg-option:sym<MSG>  {
     [
         <reply-to=.subject> \s+
     ]??
-    <size>    \n
+    <size>    \r?\n
     {}
     <payload(+$<size>)>
 }
@@ -52,7 +52,7 @@ token msg-option:sym<HMSG>  {
         <reply-to=.subject> \s+
     ]??
     <hsize>   \s+
-    <tsize>   \n
+    <tsize>   \r?\n
     {}
     <hpayload(+$<hsize>, +$<tsize>)>
 }

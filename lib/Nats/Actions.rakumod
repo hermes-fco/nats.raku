@@ -35,6 +35,6 @@ method msg-option:sym<HMSG>($/) {
         :payload(~$<hpayload>),
         :$!nats,
     ;
-    $msg does Nats::JetStream::Ackable if $<reply-to>;
+    $msg does Nats::JetStream::Ackable if $<reply-to> && $<reply-to>.Str.starts-with('$JS.ACK');
     make $msg;
 }

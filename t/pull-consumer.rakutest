@@ -26,8 +26,8 @@ use-ok 'Nats';
     my $inbox = '_INBOX.pulltest________________________';
     my $payload1 = 'msg 1';
     my $payload2 = 'msg 2';
-    my $frame1 = "MSG $inbox 0 " ~ $payload1.chars ~ "\r\n$payload1\r\n";
-    my $frame2 = "MSG $inbox 0 " ~ $payload2.chars ~ "\r\n$payload2\r\n";
+    my $frame1 = "MSG $inbox 0 " ~ $payload1.encode('utf8').bytes ~ "\r\n$payload1\r\n";
+    my $frame2 = "MSG $inbox 0 " ~ $payload2.encode('utf8').bytes ~ "\r\n$payload2\r\n";
 
     my @received;
     $nats.supply.tap: -> $msg {

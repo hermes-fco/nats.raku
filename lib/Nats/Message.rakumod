@@ -10,14 +10,14 @@ has      %.headers;
 has      $.nats where { .^can('publish') }
 
 method TWEAK(:$reply-to) {
-    # Add reply and JetStream ack helpers when we have a reply subject
+    # Add reply and JetStream ack helpers only for JetStream ACK reply subjects
     if $reply-to {
         self does Nats::Replyable($reply-to) if self !~~ Nats::Replyable;
-        self does Nats::JetStream::Ackable   if self !~~ Nats::JetStream::Ackable;
+        self does Nats::JetStream::Ackable   if $reply-to.starts-with('$JS.ACK') && self !~~ Nats::JetStream::Ackable;
     }
     # Try to parse headers if payload includes NATS/1.0 header block
     if $!payload.starts-with('NATS/1.0') {
-        my ($head, $body) = $!payload.split(/\n\n/, 2);
+        my ($head, $body) = $!payload.split(/\r?\n\r?\n/, 2);
         my %h;
         for $head.lines.skip -> $line {
             next unless $line.chars;

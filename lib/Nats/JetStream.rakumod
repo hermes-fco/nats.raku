@@ -17,7 +17,6 @@ constant STREAM-PURGE       = JS-API ~ '.STREAM.PURGE.%s';
 
 # Direct Message Subjects
 constant DIRECT-GET         = JS-API ~ '.DIRECT.GET.%s';
-constant DIRECT-GET-LAST    = JS-API ~ '.DIRECT.GET.%s.%s';
 
 # Consumer Subjects
 constant CONSUMER-CREATE   = JS-API ~ '.CONSUMER.CREATE.%s.%s';
@@ -27,14 +26,19 @@ constant CONSUMER-LIST     = JS-API ~ '.CONSUMER.LIST.%s';
 constant CONSUMER-MSG-NEXT = JS-API ~ '.CONSUMER.MSG.NEXT.%s.%s';
 
 # Convert object attributes to a JetStream-compatible Map (kebab→snake_case)
+# Duration attributes (max-age, duplicate-window, etc.) in seconds are converted to nanoseconds.
 sub to-map($obj, *%pars --> Map()) {
     $obj.^attributes.map: -> $attr {
         my $name = $attr.name.substr(2).subst: /'-'/, "_", :g;
         next if %pars{$name}:e && !%pars{$name};
         my $val = $attr.get_value: $obj;
-        next unless $val.defined && $val ~~ Str | Int | Positional | Associative;
+        next unless $val.defined && $val ~~ Str | Int | Bool | Positional | Associative;
         next if $val ~~ Associative && $val.elems == 0;
         next if $val ~~ Positional && $val.elems == 0;
+        # Convert duration fields from seconds to nanoseconds
+        if $val ~~ Int && $val > 0 && $attr.name.substr(2) eq any(<max-age duplicate-window>) {
+            $val *= 1_000_000_000;
+        }
         $name => $val
     }
 }
@@ -95,16 +99,16 @@ class Nats::Stream {
 
     # Direct message get by sequence number
     method get-msg(UInt $seq, Str :$subject) {
-        my $api-subject = $subject
-            ?? sprintf(DIRECT-GET-LAST, $!name, $subject)
-            !! sprintf(DIRECT-GET, $!name);
-        my %payload = :last_by_subj($seq);
+        my $api-subject = sprintf(DIRECT-GET, $!name);
+        my %payload = $subject
+            ?? :last_by_subj($subject)
+            !! :seq($seq);
         $!nats.request: $api-subject, to-json %payload
     }
 
     # Direct get last message for a subject
     method get-last-msg(Str $subject) {
-        $!nats.request: sprintf(DIRECT-GET-LAST, $!name, $subject), to-json { :last_by_subj($subject) }
+        $!nats.request: sprintf(DIRECT-GET, $!name), to-json { :last_by_subj($subject) }
     }
 
     method consumer(Str $name, |c) {
@@ -148,7 +152,6 @@ class Nats::Consumer {
         %cfg<description>     = $!description     if $!description.defined;
         %cfg<max_ack_pending> = $!max-ack-pending if $!max-ack-pending.defined && $!max-ack-pending >= 0;
         %cfg<max_deliver>     = $!max-deliver     if $!max-deliver.defined && $!max-deliver > 0;
-        %cfg<max_waiting>     = $!max-deliver     if $!max-deliver.defined && $!max-deliver > 0;
         %cfg<num_replicas>    = $!num-replicas    if $!num-replicas.defined && $!num-replicas > 0;
         %cfg<inactive_threshold> = $!inactive-threshold * 1_000_000_000
             if $!inactive-threshold.defined && $!inactive-threshold > 0;

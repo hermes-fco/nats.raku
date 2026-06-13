@@ -21,17 +21,17 @@ use-ok 'Nats';
     my $subject = 'js.test';
     my $sid     = 42;
 
-    # Build NATS headers block with body using \n line endings
+    # Build NATS headers block with body using \r\n line endings (NATS wire protocol)
     my @lines = ('NATS/1.0', 'Content-Type: text/plain', 'X-Req: abc');
-    my $hdrs  = @lines.join("\n") ~ "\n\n";
+    my $hdrs  = @lines.join("\r\n") ~ "\r\n\r\n";
     my $body1 = 'hello';
     my $body2 = 'world';
     my $hsize = $hdrs.encode('utf8').bytes;
     my $tsize1 = $hsize + $body1.encode('utf8').bytes;
     my $tsize2 = $hsize + $body2.encode('utf8').bytes;
 
-    my $frame1 = "HMSG $subject $sid $hsize $tsize1\n$hdrs$body1\n";
-    my $frame2 = "HMSG $subject $sid $hsize $tsize2\n$hdrs$body2\n";
+    my $frame1 = "HMSG $subject $sid $hsize $tsize1\r\n$hdrs$body1\r\n";
+    my $frame2 = "HMSG $subject $sid $hsize $tsize2\r\n$hdrs$body2\r\n";
 
     my @msgs;
     $nats.supply.tap: -> $m { @msgs.push: $m if $m ~~ Nats::Message };
