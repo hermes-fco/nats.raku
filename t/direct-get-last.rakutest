@@ -4,6 +4,8 @@ use Nats;
 use Test::Mock;
 use JSON::Fast;
 
+use lib 'lib';
+
 my $pass = 0;
 my $fail = 0;
 
